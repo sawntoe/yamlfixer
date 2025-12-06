@@ -253,14 +253,27 @@ class ProblemFixer(YAMLFixerBase):
         # TODO: we fix anyway, knowing that we may need to launch the command
         # TODO: several times to finally fix the problem.
         parts = self.problem.split()
-        expected = int(parts[3])
-        found = int(parts[6])
+        if parts[3] == "at" and parts[4] == "least":
+            expected = int(parts[5])
+            found = 0
+        else:
+            expected = int(parts[3])
+            found = int(parts[6])
         offset = expected - found
         if expected > found:
-            self.ffixer.lines[self.linenum] = (' ' * offset) + left + right
+            for i in range(self.linenum, len(self.ffixer.lines)):
+                # This is *very* much not a perfect solution.
+                # It will fuck up multiline, but this is rare and i believe would require
+                # deliberate malicious input.
+                if not self.ffixer.lines[i].strip().startswith("-"):
+                    break
+                self.ffixer.lines[i] = (' ' * offset) + self.ffixer.lines[i]
         else:
-            # expected < found because we woudln't be there otherwise anyway
-            self.ffixer.lines[self.linenum] = (left + right)[-offset:]
+            for i in range(self.linenum, len(self.ffixer.lines)):
+                if not self.ffixer.lines[i].strip().startswith("-"):
+                    break
+                self.ffixer.lines[i] = (left + right)[-offset:]
+
         self.ffixer.coffset += offset
 
     def fix_linetoolong(self, left, right):  # pylint: disable=unused-argument
